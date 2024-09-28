@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Chat Bot</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css"
+        integrity="sha512-Kc323vGBEqzTmouAECnVceyQqyqdsSiqLQISBL29aUW4U/M7pSPA/gEUZQqv1cwx4OnYxTxve5UMg5GT6L4JJg=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <main>
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="card" style="width: 700px;">
+                    <div class="card-header">Login</div>
+                    <div class="card-body">
+
+                        <form>
+                            <div class="form-group row mt-2">
+                                <label for="email" class="col-md-4 text-md-right">Email Address</label>
+                                <div class="col-md-8">
+                                    <input type="text" id="email" class="form-control" name="email" autofocus
+                                        placeholder="Enter your Email">
+                                    <span class="text-danger" id="emailErr"></span>
+                                </div>
+                            </div>
+                            <div class="form-group row mt-2">
+                                <label for="password" class="col-md-4 text-md-right">Password</label>
+                                <div class="col-md-8">
+                                    <input type="password" id="password" class="form-control" name="password"
+                                        placeholder="Enter your Password">
+                                    <span class="text-danger" id="passwordErr"></span>
+                                </div>
+                            </div>
+                            <div class="form-group row mt-2">
+                                <div class="col-md-8 offset-md-4">
+                                    <div class="checkbox">
+                                        <label>
+                                            <input type="checkbox" name="remember"> Remember Me
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group row mt-2">
+                                <div class="col-md-8 offset-md-4">
+                                    <button type="button" id="authenticateUser" class="btn btn-primary">Login</button>
+                                    <p class="text-black mt-2 mb-2">I do not have an Account, <a href="signup.html">Sign
+                                            me up</a></p>
+                                </div>
+                            </div>
+                        </form>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+        crossorigin="anonymous"></script>
+    <script src="validation.js"></script>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
+        import { getDatabase } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-database.js"; // Import getDatabase
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBi82rZljg8OY-S9CVD6pf6asIodfgFl34",
+            authDomain: "chat-bot-b89d4.firebaseapp.com",
+            databaseURL: "https://chat-bot-b89d4-default-rtdb.firebaseio.com/",
+            projectId: "chat-bot-b89d4",
+            storageBucket: "chat-bot-b89d4.appspot.com",
+            messagingSenderId: "555488481664",
+            appId: "1:555488481664:web:b24dfa677360c754c83165",
+            measurementId: "G-WVY3SMJGD3"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase();
+
+        // Wrap in DOMContentLoaded to ensure elements are available
+        document.addEventListener("DOMContentLoaded", function () {
+            // Define the authenticateFromFirebase function globally
+            window.authenticateFromFirebase = function () {
+                const email = document.getElementById("email").value;
+                const password = document.getElementById("password").value;
+
+                // Validate sign-up credentials
+                if (!validateLoginInputCredentials()) {
+                    console.log("Validation failed.");
+                    return; // Stop execution if validation fails
+                }
+
+                const auth = getAuth(app);
+                console.log('Attempting to log in with email:', email);
+
+                signInWithEmailAndPassword(auth, email, password)
+                    .then((userCredentials) => {
+                        const user = userCredentials.user;
+                        console.log('User logged in: ', user);
+                        localStorage.setItem('loggedin_user_id', user.uid);
+                        localStorage.setItem('loggedin_user_email', user.email);
+                        setTimeout(() => location.href = "startchat.html", 2000);
+                    })
+                    .catch((error) => {
+                        const errorCode = error.code;
+                        const errorMessage = error.message;
+                        console.error('Error during user login:', errorCode, errorMessage);
+                        alert(errorMessage); // Alert the user with the error message
+                    });
+            };
+
+            $("#authenticateUser").on('click', function () {
+                authenticateFromFirebase();
+            });
+        });
+
+    </script>
+</body>
+
+</html>

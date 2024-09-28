@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Interface</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css"
+        integrity="sha512-Kc323vGBEqzTmouAECnVceyQqyqdsSiqLQISBL29aUW4U/M7pSPA/gEUZQqv1cwx4OnYxTxve5UMg5GT6L4JJg=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <main>
+        <div class="card" style="width: 700px;">
+            <div class="chat-header d-flex justify-content-between align-items-center">
+                <!-- Moved Go Back button to the left -->
+                <i class="fas fa-arrow-left" id="goBackBtn" data-bs-toggle="tooltip" title="Go back"
+                    style="float: left;"></i>
+                Chatting
+                <i class="fas fa-power-off" id="logoutBtn" data-bs-toggle="tooltip" title="Logout"></i>
+            </div>
+            <div class="chat-body">
+                <div class="chats" id="chatBox">
+                    <ul class="chat-bubble-container">
+                        <li class="sent">
+                            <p class="chat-bubble from-message">Hi How are you?</p>
+                        </li>
+                        <li class="reply">
+                            <p class="chat-bubble to-message">Hi! I'm doing good thank you!</p>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="chat-footer d-flex">
+                <input type="text" placeholder="Write your message" class="form-control chat" id="messageInput">
+                <button class="submit"><i class="fas fa-paper-plane"></i></button>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+        crossorigin="anonymous"></script>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
+        import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
+        import { getDatabase, ref, set, push, onValue } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-database.js";
+
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBi82rZljg8OY-S9CVD6pf6asIodfgFl34",
+            authDomain: "chat-bot-b89d4.firebaseapp.com",
+            databaseURL: "https://chat-bot-b89d4-default-rtdb.firebaseio.com/",
+            projectId: "chat-bot-b89d4",
+            storageBucket: "chat-bot-b89d4.appspot.com",
+            messagingSenderId: "555488481664",
+            appId: "1:555488481664:web:b24dfa677360c754c83165",
+            measurementId: "G-WVY3SMJGD3"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const auth = getAuth();
+
+        // Go Back Button: Navigate to the previous page or a defined URL
+        document.getElementById("goBackBtn").addEventListener("click", function () {
+            // Example: Navigate to a previous page
+            window.history.back(); // This will go back to the previous page
+            // Or, you can redirect to a specific URL like this:
+            // window.location.href = "your_previous_page_url";
+        });
+
+        // Logout Button: Sign out the user and redirect to the login page
+        document.getElementById("logoutBtn").addEventListener("click", function () {
+            signOut(auth).then(() => {
+                // Redirect to the login page after signing out
+                window.location.href = "index.html"; // Change this to your login page URL
+            }).catch((error) => {
+                console.error("Error signing out:", error);
+            });
+        });
+
+        // Message sending
+        $(window).on('keydown', function (e) {
+            if (e.which == 13) { // If Enter key is pressed
+                newChat();
+                return false;
+            }
+        });
+
+        $(".submit").click(function () {
+            newChat();
+        });
+
+        function newChat() {
+            const chat = $(".chat").val();
+            if ($.trim(chat) === "") {
+                return false;
+            }
+            insertChatData(chat);
+            $(".chat").val(''); // Clear the input after sending
+        }
+
+        function insertChatData(chat) {
+            const messageRef = push(ref(db, "/chats"));
+            set(messageRef, {
+                from: localStorage.getItem('loggedin_user_id'),
+                to: localStorage.getItem('chat_user_id'),
+                message: chat
+            });
+        }
+
+        // Listening for new messages
+        const chatRef = ref(db, "/chats");
+        onValue(chatRef, (snapshot) => {
+            const arr = [];
+            snapshot.forEach((childSnapshot) => {
+                const childData = childSnapshot.val();
+                if ((childData.from === localStorage.getItem('loggedin_user_id') || childData.to === localStorage.getItem('loggedin_user_id')) ||
+                    (childData.from === localStorage.getItem('chat_user_id') || childData.to === localStorage.getItem('chat_user_id'))) {
+                    arr.push(childData);
+                }
+            });
+            writeChatsOnScreen(arr);
+        });
+
+        // Writing chats on the screen
+        function writeChatsOnScreen(chats) {
+            $(".chats ul").html(""); // Clear the chat box
+            for (let chat in chats) {
+                const from_user_id = chats[chat].from;
+                const to_user_id = chats[chat].to;
+                const stored_message = chats[chat].message;
+
+                let message_type, bubble;
+                if (from_user_id === localStorage.getItem('loggedin_user_id')) {
+                    message_type = "sent";
+                    bubble = "from-message";
+                } else {
+                    message_type = "reply";
+                    bubble = "to-message";
+                }
+
+                // Append the message to the chatbox
+                $(".chats ul").append('<li class="' + message_type + '"><p class="chat-bubble ' + bubble + '">' + stored_message + '</p></li>');
+            }
+        }
+
+        // Initialize tooltips
+        const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+        const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+    </script>
+
+</body>
+
+</html>
